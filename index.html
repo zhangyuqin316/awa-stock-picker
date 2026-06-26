@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>awa Stock Picker</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="topbar">
+        <div>
+          <h1>awa Stock Picker</h1>
+          <p id="summary">正在获取实时行情...</p>
+        </div>
+        <div class="actions">
+          <button id="refreshButton" type="button">刷新</button>
+          <label class="switch">
+            <input id="autoRefresh" type="checkbox" checked />
+            <span>自动刷新</span>
+          </label>
+        </div>
+      </header>
+
+      <section class="rules" aria-label="筛选条件">
+        <span>涨幅 3%-7%</span>
+        <span>量比 &lt; 2</span>
+        <span>换手 5%-8%</span>
+        <span>成交额 &gt; 1 亿</span>
+        <span>市值 30-100 亿</span>
+        <span>剔除科创板 / ST</span>
+      </section>
+
+      <section>
+        <div class="sectionTitle">
+          <h2>今日最符合的 3 只</h2>
+          <p id="clock">--</p>
+        </div>
+        <div id="topCards" class="topCards"></div>
+      </section>
+
+      <section>
+        <div class="sectionTitle">
+          <h2>候选池</h2>
+          <p>完全命中条件的股票，按匹配度排序</p>
+        </div>
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>排名</th>
+                <th>代码</th>
+                <th>名称</th>
+                <th>价格</th>
+                <th>涨幅</th>
+                <th>量比</th>
+                <th>换手</th>
+                <th>成交额</th>
+                <th>总市值</th>
+                <th>板块</th>
+                <th>分数</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="stockRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <div class="sectionTitle">
+          <h2>接近条件</h2>
+          <p>当完全命中不足 3 只时，用这里的股票补足前三</p>
+        </div>
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>排名</th>
+                <th>代码</th>
+                <th>名称</th>
+                <th>价格</th>
+                <th>涨幅</th>
+                <th>量比</th>
+                <th>换手</th>
+                <th>成交额</th>
+                <th>总市值</th>
+                <th>板块</th>
+                <th>分数</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="nearRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer>
+        工具只做条件筛选和观察，不构成投资建议。盘中数据会波动，临近收盘筛选更稳定。
+      </footer>
+    </main>
+
+    <div id="detailModal" class="modal" aria-hidden="true">
+      <div class="modalPanel" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+        <div class="modalTop">
+          <button id="backDetail" class="backButton" type="button">返回</button>
+          <div>
+            <h2 id="detailTitle">个股详情</h2>
+            <p id="detailSub">--</p>
+          </div>
+          <button id="closeDetail" class="iconButton" type="button">关闭</button>
+        </div>
+
+        <div id="detailMetrics" class="detailMetrics"></div>
+
+        <div class="tabs" aria-label="图表类型">
+          <button class="tab active" data-chart="minute" type="button">分时线</button>
+          <button class="tab" data-chart="five" type="button">五日线</button>
+          <button class="tab" data-chart="day" type="button">日K</button>
+          <button class="tab" data-chart="week" type="button">周K</button>
+          <button class="tab" data-chart="month" type="button">月K</button>
+        </div>
+
+        <div class="chartShell">
+          <canvas id="stockChart" width="980" height="420"></canvas>
+          <div id="chartStatus" class="chartStatus">请选择股票</div>
+        </div>
+
+        <div class="detailGrid">
+          <section class="infoPanel">
+            <h3>公司内容</h3>
+            <div id="companyInfo" class="companyInfo">启动本地服务后可显示更完整的公司简介；当前先显示行情和外部资料入口。</div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
