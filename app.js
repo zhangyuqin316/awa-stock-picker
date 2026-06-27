@@ -17,8 +17,15 @@ const chartCanvas = document.querySelector("#stockChart");
 const chartStatus = document.querySelector("#chartStatus");
 
 let timer = null;
+let countdownTimer = null;
+let secondsToRefresh = 30;
+let summaryText = "正在获取实时行情...";
+let refreshCount = 0;
+let lastRefreshLabel = "--";
+let isRefreshing = false;
 let currentStock = null;
 let currentChart = "minute";
+const REFRESH_SECONDS = 30;
 
 const LIST_URL =
   "https://82.push2.eastmoney.com/api/qt/clist/get?pn=1&pz=5000&po=1&np=1&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:80,m:1+t:2&fields=f12,f14,f2,f3,f6,f8,f10,f20,f21,f100";
@@ -26,6 +33,22 @@ const LIST_URL =
 const TENCENT_QUOTE_HOST = "https://qt.gtimg.cn/q=";
 let directQuoteCache = null;
 let directQuoteCacheTime = 0;
+
+function updateSummary() {
+  const refreshState = isRefreshing ? "正在刷新" : `已刷新 ${refreshCount} 次`;
+  const countdownText = autoRefresh.checked ? `下次 ${secondsToRefresh} 秒` : "自动刷新已关闭";
+  summary.textContent = `${summaryText}｜${refreshState}｜上次 ${lastRefreshLabel}｜${countdownText}`;
+}
+
+function setSummary(text) {
+  summaryText = text;
+  updateSummary();
+}
+
+function resetCountdown() {
+  secondsToRefresh = REFRESH_SECONDS;
+  updateSummary();
+}
 
 const SECTOR_RULES = [
   { macro: "科技", sector: "PCB/覆铜板", keywords: ["PCB", "印制电路", "电路板", "覆铜板", "载板", "沪电", "胜宏", "深南", "生益", "景旺", "崇达", "依顿", "奥士康", "明阳电路", "世运"] },
@@ -358,7 +381,7 @@ async function loadTencentDirectMarket() {
   const codes = buildScanCodes();
   const rows = [];
   for (let index = 0; index < codes.length; index += 180) {
-    summary.textContent = `正在直连腾讯实时行情：${Math.min(index + 180, codes.length)} / ${codes.length}`;
+    setSummary(`正在直连腾讯实时行情：${Math.min(index + 180, codes.length)} / ${codes.length}`);
     const symbols = codes.slice(index, index + 180).map(tencentSymbol);
     const batchRows = await loadTencentBatch(symbols);
     rows.push(...batchRows.map(parseTencentQuote).filter(Boolean));
@@ -490,6 +513,9 @@ function renderRows(target, stocks, emptyText) {
 }
 
 async function loadStocks() {
+  resetCountdown();
+  isRefreshing = true;
+  updateSummary();
   refreshButton.disabled = true;
   refreshButton.textContent = "刷新中";
   try {
@@ -498,11 +524,15 @@ async function loadStocks() {
     renderTop(data.top3);
     renderRows(stockRows, data.candidates, "暂无完全命中的股票");
     renderRows(nearRows, data.nearCandidates || [], "暂无接近条件的股票");
-    summary.textContent = `扫描 ${data.marketCount} 只，完全命中 ${data.candidateCount} 只。数据源：${data.source}${data.stale ? "（显示缓存）" : ""}`;
+    setSummary(`扫描 ${data.marketCount} 只，完全命中 ${data.candidateCount} 只。数据源：${data.source}${data.stale ? "（显示缓存）" : ""}`);
     clock.textContent = `更新时间：${formatTime(data.fetchedAt)}`;
+    refreshCount += 1;
+    lastRefreshLabel = new Date().toLocaleTimeString("zh-CN", { hour12: false });
   } catch (error) {
-    summary.textContent = `获取失败：${error.message}`;
+    setSummary(`获取失败：${error.message}`);
   } finally {
+    isRefreshing = false;
+    updateSummary();
     refreshButton.disabled = false;
     refreshButton.textContent = "刷新";
   }
@@ -598,7 +628,7 @@ function demoNews(stock) {
       title: "筛选逻辑说明",
       source: "工具内置",
       time: "当前",
-      summary: "这个工具按涨幅 3%-7%、量比小于 2、换手 5%-8%、成交额大于 1 亿、市值 30-100 亿来筛选，并排除科创板和 ST。",
+      summary: "这个工具按涨幅 3%-7%、量比小于 2、换手 5%-8%、成交额大于 1 亿、市值 30-100 亿来筛选，并排除 ST。",
     },
   ];
 }
@@ -1296,9 +1326,19 @@ function closeModal() {
 
 function setupTimer() {
   if (timer) clearInterval(timer);
+  if (countdownTimer) clearInterval(countdownTimer);
   if (autoRefresh.checked) {
-    timer = setInterval(() => loadStocks(), 30000);
+    resetCountdown();
+    countdownTimer = setInterval(() => {
+      secondsToRefresh -= 1;
+      if (secondsToRefresh <= 0) {
+        loadStocks();
+        return;
+      }
+      updateSummary();
+    }, 1000);
   }
+  updateSummary();
 }
 
 document.addEventListener("click", (event) => {
